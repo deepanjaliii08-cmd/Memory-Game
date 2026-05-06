@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Memory Game Pro - Levels</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      text-align: center;
+      background: linear-gradient(135deg, #1e3c72, #2a5298);
+      color: white;
+    }
+
+    h1 {
+      margin-top: 20px;
+    }
+
+    #info {
+      margin: 10px;
+      font-size: 18px;
+    }
+
+    #game {
+      margin: 20px auto;
+      display: grid;
+      gap: 10px;
+      justify-content: center;
+      perspective: 1000px;
+    }
+
+    .card {
+      width: 70px;
+      height: 70px;
+      position: relative;
+      transform-style: preserve-3d;
+      transition: transform 0.5s, opacity 0.4s;
+      cursor: pointer;
+    }
+
+    .card.flip {
+      transform: rotateY(180deg);
+    }
+
+    .front, .back {
+      width: 100%;
+      height: 100%;
+      position: absolute;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 26px;
+      backface-visibility: hidden;
+    }
+
+    .front {
+      background: #fff;
+      color: black;
+      transform: rotateY(180deg);
+    }
+
+    .back {
+      background: #444;
+    }
+
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      margin-top: 10px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      background: #ff9800;
+      color: white;
+    }
+
+    #overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.8);
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+    }
+  </style>
+</head>
+<body>
+
+<h1>🧠 Memory Game Pro</h1>
+
+<div id="info">
+  Level: <span id="level">1</span> |
+  Moves: <span id="moves">0</span> | 
+  Time: <span id="time">0</span>s
+</div>
+
+<div id="game"></div>
+
+<button onclick="startGame()">Restart</button>
+
+<div id="overlay">
+  <h2 id="message"></h2>
+  <button onclick="nextLevel()">Next Level</button>
+</div>
+
+<script>
+const emojis = ["🍎","🍌","🍇","🍉","🍒","🥝","🍍","🍑","🍋","🥥","🍓","🍈","🍏","🥭","🍅","🍆","🥕","🌽"];
+
+let level = 1;
+let flipped = [];
+let moves = 0;
+let time = 0;
+let timer;
+
+function getGrid(level) {
+  const layouts = [
+    [4,4],
+    [4,5],
+    [4,6],
+    [5,6],
+    [6,6]
+  ];
+  return layouts[level-1] || [6,6];
+}
+
+function startGame() {
+  const game = document.getElementById("game");
+  game.innerHTML = "";
+
+  const [rows, cols] = getGrid(level);
+  game.style.gridTemplateColumns = `repeat(${cols}, 70px)`;
+
+  const totalCards = rows * cols;
+  const neededPairs = totalCards / 2;
+
+  let selected = emojis.slice(0, neededPairs);
+  let cards = shuffle([...selected, ...selected]);
+
+  flipped = [];
+  moves = 0;
+  time = 0;
+
+  document.getElementById("moves").innerText = moves;
+  document.getElementById("time").innerText = time;
+  document.getElementById("level").innerText = level;
+  document.getElementById("overlay").style.display = "none";
+
+  clearInterval(timer);
+  timer = setInterval(() => {
+    time++;
+    document.getElementById("time").innerText = time;
+  }, 1000);
+
+  cards.forEach((emoji) => {
+    const card = document.createElement("div");
+    card.classList.add("card");
+
+    card.innerHTML = `
+      <div class="front">${emoji}</div>
+      <div class="back"></div>
+    `;
+
+    card.onclick = () => flipCard(card, emoji);
+    game.appendChild(card);
+  });
+}
+
+function shuffle(arr) {
+  return arr.sort(() => Math.random() - 0.5);
+}
+
+function flipCard(card, emoji) {
+  if (flipped.length < 2 && !card.classList.contains("flip") && card.style.visibility !== "hidden") {
+    card.classList.add("flip");
+    flipped.push({card, emoji});
+
+    if (flipped.length === 2) {
+      moves++;
+      document.getElementById("moves").innerText = moves;
+      setTimeout(checkMatch, 500);
+    }
+  }
+}
+
+function checkMatch() {
+  const [a, b] = flipped;
+
+  if (a.emoji === b.emoji) {
+    a.card.style.opacity = "0";
+    b.card.style.opacity = "0";
+
+    setTimeout(() => {
+      a.card.style.visibility = "hidden";
+      b.card.style.visibility = "hidden";
+      checkWin();
+    }, 300);
+  } else {
+    a.card.classList.remove("flip");
+    b.card.classList.remove("flip");
+  }
+
+  flipped = [];
+}
+
+function checkWin() {
+  const cards = document.querySelectorAll(".card");
+  const remaining = [...cards].filter(c => c.style.visibility !== "hidden");
+
+  if (remaining.length === 0) {
+    clearInterval(timer);
+
+    document.getElementById("message").innerText =
+      `Level ${level} Complete! 🎉`;
+
+    document.getElementById("overlay").style.display = "flex";
+  }
+}
+
+function nextLevel() {
+  level++;
+  if (level > 5) {
+    document.getElementById("message").innerText = "🏆 You Finished All Levels!";
+    return;
+  }
+  startGame();
+}
+
+startGame();
+</script>
+
+</body>
+</html>
